@@ -58,6 +58,11 @@ module XCPretty
     COMPILE_MATCHER = /^Compile[\w]+\s.+?\s((?:\\.|[^ ])+\/((?:\\.|[^ ])+\.(?:m|mm|c|cc|cpp|cxx|swift)))\s.*/
 
     # @regex Captured groups
+    # $1 file_path
+    # $2 file_name (e.g. KWNull.m)
+    SWIFT_COMPILE_MATCHER = /^SwiftCompile\s.+?\s((?:\\.|[^ ])+\/((?:\\.|[^ ])+\.swift))\s.*/
+
+    # @regex Captured groups
     # $1 compiler_command
     # $2 file_path
     COMPILE_COMMAND_MATCHER = /^\s*(.*clang\s.*\s\-c\s(.*\.(?:m|mm|c|cc|cpp|cxx))\s.*\.o)$/
@@ -101,6 +106,12 @@ module XCPretty
     FAILING_TEST_MATCHER = /^\s*(.+:\d+):\serror:\s[\+\-]\[(.*)\s(.*)\]\s:(?:\s'.*'\s\[FAILED\],)?\s(.*)/
 
     # @regex Captured groups
+    # $1 = suite
+    # $2 = test_case
+    # $3 = time
+    FAILING_PARALLEL_TEST_MATCHER = /^\s*Test case\s'(.*)\.(test.*)'\sfailed\s.*\((\d*\.\d{3})\sseconds\)/
+
+    # @regex Captured groups
     # $1 = file
     # $2 = reason
     UI_FAILING_TEST_MATCHER = /^\s{4}t = \s+\d+\.\d+s\s+Assertion Failure: (.*:\d+): (.*)$/
@@ -128,6 +139,11 @@ module XCPretty
     # $3 = time
     TEST_CASE_PASSED_MATCHER = /^\s*Test Case\s'-\[(.*)\s(.*)\]'\spassed\s\((\d*\.\d{3})\sseconds\)/
 
+    # @regex Captured groups
+    # $1 = suite
+    # $2 = test_case
+    # $3 = time
+    PARALLEL_TEST_CASE_PASSED_MATCHER = /^\s*Test case\s'(.*)\.(test.*)'\spassed\s.*\((\d*\.\d{3})\sseconds\)/
 
     # @regex Captured groups
     # $1 = suite
@@ -344,6 +360,8 @@ module XCPretty
         formatter.format_error($1)
       when COMPILE_MATCHER
         formatter.format_compile($2, $1)
+      when SWIFT_COMPILE_MATCHER
+        formatter.format_compile($2, $1)
       when COMPILE_COMMAND_MATCHER
         formatter.format_compile_command($1, $2)
       when COMPILE_XIB_MATCHER
@@ -364,6 +382,8 @@ module XCPretty
         formatter.format_failing_test(@test_suite, @test_case, $2, $1)
       when FAILING_TEST_MATCHER
         formatter.format_failing_test($2, $3, $4, $1)
+      when FAILING_PARALLEL_TEST_MATCHER
+        formatter.format_failing_test($1, "#{$1}.#{$2}", "Failed in (#{$3} seconds)", "n/a")
       when FATAL_ERROR_MATCHER
         formatter.format_error($1)
       when FILE_MISSING_ERROR_MATCHER
@@ -386,6 +406,8 @@ module XCPretty
         formatter.format_pending_test($1, $2)
       when TEST_CASE_PASSED_MATCHER
         formatter.format_passing_test($1, $2, $3)
+      when PARALLEL_TEST_CASE_PASSED_MATCHER
+        formatter.format_passing_test($1, "#{$1}.#{$2}", $3)
       when PODS_ERROR_MATCHER
         formatter.format_error($1)
       when PROCESS_INFO_PLIST_MATCHER
@@ -442,6 +464,8 @@ module XCPretty
         @tests_done = true
       when FAILING_TEST_MATCHER
         store_failure(file: $1, test_suite: $2, test_case: $3, reason: $4)
+      when FAILING_PARALLEL_TEST_MATCHER
+        store_failure(file: "n/a", test_suite: $1, test_case: $2, reason: "Failed")
       when UI_FAILING_TEST_MATCHER
         store_failure(file: $1, test_suite: @test_suite, test_case: @test_case, reason: $2)
       when RESTARTING_TESTS_MATCHER
